@@ -2,14 +2,18 @@ import numpy as np
 import os
 import constants
 from sklearn.model_selection import ShuffleSplit
+import k_means
+import preprocess_data
+
 
 def load_data(folder, label):
 
     data = None
     for f in os.listdir(folder):
-        print(str(f))
-        if str(f).endswith('.dat'):
+
+        if str(f).endswith('.dat') and not str(f).startswith('all_data'):
             # X = np.loadtxt(folder+str(f), delimiter=' ')
+            print(str(f))
             try:
                 X = np.genfromtxt(folder+str(f), delimiter=' ')
             except ValueError:
@@ -66,7 +70,9 @@ def get_data_matrix():
     data = np.vstack((non_violent_data, violent_data))
     labels = np.hstack((non_violent_labels, violent_labels))
 
-    train_data, train_labels, test_data, test_labels = shuffle_and_split(data, labels, ratio=0.15)
+    estimated_labels = preprocess_data.refine_raw_data()
+
+    train_data, train_labels, test_data, test_labels = shuffle_and_split(data, estimated_labels, ratio=0.15)
 
     return train_data, train_labels, test_data, test_labels
 

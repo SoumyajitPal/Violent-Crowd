@@ -15,5 +15,6 @@ def MLP():
     print('Model Accuracy: ', mlp.score(train_features, train_labels))
     print('Test Accuracy: ', mlp.score(test_features, test_labels))
 
-if __name__ =='__main__':
+
+if __name__ == '__main__':
     MLP()
