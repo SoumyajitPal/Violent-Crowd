@@ -70,7 +70,7 @@ def get_data_matrix():
     data = np.vstack((non_violent_data, violent_data))
     labels = np.hstack((non_violent_labels, violent_labels))
 
-    estimated_labels = preprocess_data.refine_raw_data()
+    estimated_labels, non_violent_label, violent_label = preprocess_data.refine_raw_data()
 
     train_data, train_labels, test_data, test_labels = shuffle_and_split(data, estimated_labels, ratio=0.15)
 
