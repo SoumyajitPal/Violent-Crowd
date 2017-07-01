@@ -4,7 +4,7 @@ import os
 import data_load
 import preprocess_data
 import constants
-from random import randint
+import random
 
 
 def get_start_and_end_indices(folder):
@@ -33,7 +33,13 @@ def load_train_and_test_data(ratio):
     non_violent_data, non_violent_labels = data_load.get_from_cache('E:/Data/Violent Crowd/Crowd_violence_dataset/NonViolent_features_improved/', label=0)
     violent_data, violent_labels = data_load.get_from_cache('E:/Data/Violent Crowd/Crowd_violence_dataset/Violent_features_improved/', label=1)
 
-    estimated_labels, non_violent_label, violent_label = preprocess_data.refine_raw_data()
+    # non_violent_angle, dummy_label = data_load.get_from_cache('E:/Data/Violent Crowd/Crowd_violence_dataset/Non_violent_angle/', label=0)
+    # violent_angle, dummy_label = data_load.get_from_cache('E:/Data/Violent Crowd/Crowd_violence_dataset/Violent_angle/', label=0)
+
+    # non_violent_data = np.hstack((non_violent_data, non_violent_angle))
+    # violent_data = np.hstack((violent_data, violent_angle))
+
+    estimated_labels, non_violent_outlier_indices, violent_outlier_indices, non_violent_label, violent_label  = preprocess_data.refine_raw_data()
     non_violent_labels = estimated_labels[:non_violent_data.shape[0]]
     violent_labels = estimated_labels[non_violent_data.shape[0]:]
 
@@ -42,11 +48,29 @@ def load_train_and_test_data(ratio):
 
     number_of_videos_from_each_set = np.floor(ratio * constants.TOTAL_NUMBER_OF_VIDEOS / 2)
 
-    non_violent_indices = [randint(0, len(non_violent_terminal_indices)) for p in range(0, int(number_of_videos_from_each_set))]
-    violent_indices = [randint(0, len(violent_terminal_indices)) for p in range(0, int(number_of_videos_from_each_set))]
+    non_violent_allowed_range = list(range(0, len(non_violent_terminal_indices)))
+    violent_allowed_range = list(range(0, len(violent_terminal_indices)))
+
+    for v in non_violent_outlier_indices:
+        non_violent_allowed_range.remove(v)
+    
+    for v in violent_outlier_indices:
+        violent_allowed_range.remove(v)
+    
+    non_violent_indices = [random.choice(non_violent_allowed_range) for p in range(0, int(number_of_videos_from_each_set))]
+    violent_indices = [random.choice(violent_allowed_range) for p in range(0, int(number_of_videos_from_each_set))]
 
     non_violent_train_indices = [index for index in range(0, int(constants.TOTAL_NUMBER_OF_VIDEOS / 2)) if index not in non_violent_indices]
     violent_train_indices = [index for index in range(0, int(constants.TOTAL_NUMBER_OF_VIDEOS / 2)) if index not in violent_indices]
+
+    non_violent_train_indices = list(set(non_violent_train_indices) - set(non_violent_outlier_indices))    
+    violent_train_indices = list(set(violent_train_indices) - set(violent_outlier_indices))
+
+    print('Number of non-violent train videos ', len(non_violent_train_indices))
+    print('Number of non-violent test videos ', len(non_violent_indices))
+    print('Number of violent train videos ', len(violent_train_indices))
+    print('Number of violent test videos ', len(violent_indices))
+
 
     non_violent_indices = [non_violent_terminal_indices[index] for index in non_violent_indices]
     violent_indices = [violent_terminal_indices[index] for index in violent_indices]

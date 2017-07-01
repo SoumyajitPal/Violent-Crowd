@@ -4,14 +4,20 @@ import k_means
 import matplotlib.pyplot as plt
 import os
 import csv
+import per_video_test
+import constants
 
 
 def plot_progress(estimated_labels, non_violent_label, violent_label):
 
     start_index = 0
 
-    folder = 'D:/Data/Violent Crowd/Crowd_violence_dataset/Violent_features_improved/'
-    savefolder = 'D:/Data/Violent Crowd/Crowd_violence_dataset/NonViolent_visualization/'
+    folder = 'E:/Data/Violent Crowd/Crowd_violence_dataset/Violent_features_improved/'
+    savefolder = 'E:/Data/Violent Crowd/Crowd_violence_dataset/NonViolent_visualization_including_angle/'
+
+    if not os.path.exists(savefolder):
+        os.makedirs(savefolder)
+
     ratio_array = []
 
     for file in os.listdir(folder):
@@ -52,7 +58,7 @@ def plot_progress(estimated_labels, non_violent_label, violent_label):
 
     median = np.median(ratio_array)
     mean = np.mean(ratio_array)
-    lowest_violence_point = mean - 2 * np.std(ratio_array)
+    lowest_violence_point = mean - np.std(ratio_array)
 
     okay_violence = [video for video in ratio_array if video > mean]
     good_violence = [video for video in ratio_array if video > median]
@@ -65,9 +71,69 @@ def plot_progress(estimated_labels, non_violent_label, violent_label):
     print(almost_non_violent_videos)
 
 
+def preprocess_violent(estimated_violent_labels, non_violent_label, violent_label):
+    violent_terminal_indices = per_video_test.get_start_and_end_indices('E:/Data/Violent Crowd/Crowd_violence_dataset/Violent_features_improved/')
+    bad_video_count = 0
+    outlier_indices = []
+    for video_number, instance in enumerate(violent_terminal_indices):
+        start, end = instance
+        labels = estimated_violent_labels[start:end]
+        violence = [index for index in labels if index == violent_label]
+        non_violence = [index for index in labels if index == non_violent_label]
+
+        if len(violence) < 0.3 * len(labels):
+            bad_video_count += 1
+            outlier_indices.append(video_number)
+
+    constants.TOTAL_NUMBER_OF_VIDEOS -= bad_video_count
+    print('Number of bad violent videos ', bad_video_count)
+    return outlier_indices
+
+
+def preprocess_non_violent(estimated_non_violent_labels, non_violent_label, violent_label):
+    non_violent_terminal_indices = per_video_test.get_start_and_end_indices('E:/Data/Violent Crowd/Crowd_violence_dataset/NonViolent_features_improved/')
+    estimated_labels = None
+    bad_video_count = 0
+    outlier_indices = []
+    for video_number, instance in enumerate(non_violent_terminal_indices):
+        start, end = instance
+        labels = estimated_non_violent_labels[start:end]
+        violence = [index for index in labels if index == violent_label]
+        non_violence = [index for index in labels if index == non_violent_label]
+
+        if len(violence) > len(non_violence):
+            bad_video_count += 1
+            outlier_indices.append(video_number)
+        
+        if len(violence) < (0.8 * len(non_violence)):
+            if estimated_labels is None:
+                estimated_labels = np.ones(shape=(len(labels),)) * non_violent_label
+            else:
+                estimated_labels = np.hstack((estimated_labels, np.ones(shape=(len(labels),)) * non_violent_label))
+        else:
+            if estimated_labels is None:
+                estimated_labels = labels
+            else:
+                estimated_labels = np.hstack((estimated_labels, labels))
+
+    constants.TOTAL_NUMBER_OF_VIDEOS -= bad_video_count
+    print('Number of bad non-violent videos ', bad_video_count)
+    print('Original non-violent labels size', estimated_non_violent_labels.shape)
+    # print('Original non-violent data size', non_violent_data.shape)
+    print('Estimated non-violent labels size', estimated_labels.shape)
+    # print('Estimated non-violent data size', estimated_data.shape)
+    return estimated_labels, outlier_indices
+
+
 def refine_raw_data():
     non_violent_data, non_violent_labels = data_load.get_from_cache('E:/Data/Violent Crowd/Crowd_violence_dataset/NonViolent_features_improved/', label=0)
     violent_data, violent_labels = data_load.get_from_cache('E:/Data/Violent Crowd/Crowd_violence_dataset/Violent_features_improved/', label=1)
+
+    # non_violent_angle, dummy_label = data_load.get_from_cache('E:/Data/Violent Crowd/Crowd_violence_dataset/Non_violent_angle/', label=0)
+    # violent_angle, dummy_label = data_load.get_from_cache('E:/Data/Violent Crowd/Crowd_violence_dataset/Violent_angle/',label=0)
+
+    # non_violent_data = np.hstack((non_violent_data, non_violent_angle))
+    # violent_data = np.hstack((violent_data, violent_angle))
 
     data = np.vstack((non_violent_data, violent_data))
     labels = np.hstack((non_violent_labels, violent_labels))
@@ -92,12 +158,13 @@ def refine_raw_data():
 
     # print(np.count_nonzero(np.fabs(actual_non_violent_labels - estimated_non_violent_labels)))
     # print(np.count_nonzero(np.fabs(actual_violent_labels - estimated_violent_labels)))
+    estimated_non_violent_labels, non_violent_outlier_indices = preprocess_non_violent(estimated_non_violent_labels, non_violent_label, violent_label)
+    violent_outlier_indices = preprocess_violent(estimated_violent_labels, non_violent_label, violent_label)
 
-    estimated_labels = np.hstack((actual_non_violent_labels, estimated_violent_labels))
-
+    estimated_labels = np.hstack((estimated_non_violent_labels, estimated_violent_labels))
     # plot_progress(estimated_violent_labels, non_violent_label, violent_label)
 
-    return estimated_labels, non_violent_label, violent_label
+    return estimated_labels, non_violent_outlier_indices, violent_outlier_indices, non_violent_label, violent_label
 
 
 if __name__ == '__main__':
