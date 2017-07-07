@@ -72,7 +72,7 @@ def plot_progress(estimated_labels, non_violent_label, violent_label):
 
 
 def preprocess_violent(estimated_violent_labels, non_violent_label, violent_label):
-    violent_terminal_indices = per_video_test.get_start_and_end_indices('E:/Data/Violent Crowd/Crowd_violence_dataset/Violent_features_improved/')
+    violent_terminal_indices = per_video_test.get_start_and_end_indices('D:/Data/Violent Crowd/Crowd_violence_dataset/Violent_features_improved/')
     bad_video_count = 0
     outlier_indices = []
     for video_number, instance in enumerate(violent_terminal_indices):
@@ -81,17 +81,18 @@ def preprocess_violent(estimated_violent_labels, non_violent_label, violent_labe
         violence = [index for index in labels if index == violent_label]
         non_violence = [index for index in labels if index == non_violent_label]
 
-        if len(violence) < 0.3 * len(labels):
+        if len(violence) < 0.05 * len(labels):
             bad_video_count += 1
             outlier_indices.append(video_number)
 
     constants.TOTAL_NUMBER_OF_VIDEOS -= bad_video_count
     print('Number of bad violent videos ', bad_video_count)
+    print(outlier_indices)
     return outlier_indices
 
 
 def preprocess_non_violent(estimated_non_violent_labels, non_violent_label, violent_label):
-    non_violent_terminal_indices = per_video_test.get_start_and_end_indices('E:/Data/Violent Crowd/Crowd_violence_dataset/NonViolent_features_improved/')
+    non_violent_terminal_indices = per_video_test.get_start_and_end_indices('D:/Data/Violent Crowd/Crowd_violence_dataset/NonViolent_features_improved/')
     estimated_labels = None
     bad_video_count = 0
     outlier_indices = []
@@ -101,7 +102,7 @@ def preprocess_non_violent(estimated_non_violent_labels, non_violent_label, viol
         violence = [index for index in labels if index == violent_label]
         non_violence = [index for index in labels if index == non_violent_label]
 
-        if len(violence) > len(non_violence):
+        if len(violence) > (20 * len(non_violence)):
             bad_video_count += 1
             outlier_indices.append(video_number)
         
@@ -122,12 +123,13 @@ def preprocess_non_violent(estimated_non_violent_labels, non_violent_label, viol
     # print('Original non-violent data size', non_violent_data.shape)
     print('Estimated non-violent labels size', estimated_labels.shape)
     # print('Estimated non-violent data size', estimated_data.shape)
+    print(outlier_indices)
     return estimated_labels, outlier_indices
 
 
 def refine_raw_data():
-    non_violent_data, non_violent_labels = data_load.get_from_cache('E:/Data/Violent Crowd/Crowd_violence_dataset/NonViolent_features_improved/', label=0)
-    violent_data, violent_labels = data_load.get_from_cache('E:/Data/Violent Crowd/Crowd_violence_dataset/Violent_features_improved/', label=1)
+    non_violent_data, non_violent_labels = data_load.get_from_cache('D:/Data/Violent Crowd/Crowd_violence_dataset/NonViolent_features_improved/', label=0)
+    violent_data, violent_labels = data_load.get_from_cache('D:/Data/Violent Crowd/Crowd_violence_dataset/Violent_features_improved/', label=1)
 
     # non_violent_angle, dummy_label = data_load.get_from_cache('E:/Data/Violent Crowd/Crowd_violence_dataset/Non_violent_angle/', label=0)
     # violent_angle, dummy_label = data_load.get_from_cache('E:/Data/Violent Crowd/Crowd_violence_dataset/Violent_angle/',label=0)
@@ -138,23 +140,29 @@ def refine_raw_data():
     data = np.vstack((non_violent_data, violent_data))
     labels = np.hstack((non_violent_labels, violent_labels))
 
-    estimated_labels = k_means.K_Means(data, labels)
+    # estimated_labels = k_means.K_Means(data, labels)
 
-    non_violent_count = non_violent_labels.shape[0]
-    violent_count = violent_labels.shape[0]
+    # non_violent_count = non_violent_labels.shape[0]
+    # violent_count = violent_labels.shape[0]
 
-    estimated_non_violent_labels = estimated_labels[0:non_violent_count]
-    estimated_violent_labels = estimated_labels[non_violent_count:]
+    # estimated_non_violent_labels = estimated_labels[0:non_violent_count]
+    # estimated_violent_labels = estimated_labels[non_violent_count:]
 
-    non_violent_label = 0
-    violent_label = 1
+    # non_violent_label = 0
+    # violent_label = 1
 
-    if np.count_nonzero(estimated_non_violent_labels) > (non_violent_count - np.count_nonzero(estimated_non_violent_labels)):
-        non_violent_label = 1
-        violent_label = 0
+    # if np.count_nonzero(estimated_non_violent_labels) > (non_violent_count - np.count_nonzero(estimated_non_violent_labels)):
+    #     non_violent_label = 1
+    #     violent_label = 0
 
-    actual_non_violent_labels = np.ones(shape=(non_violent_count,)) * non_violent_label
-    actual_violent_labels = np.ones(shape=(violent_count,)) * violent_label
+    estimated_non_violent_labels = np.loadtxt('Non-violent-labels-3-7-17.txt', delimiter=' ')
+    estimated_violent_labels = np.loadtxt('Violent-labels-3-7-17.txt', delimiter=' ')
+
+    loaded_labels = np.loadtxt('labls-3-7-17.txt', delimiter=' ')
+    non_violent_label = int(loaded_labels[0])
+    violent_label = int(loaded_labels[1])
+    # actual_non_violent_labels = np.ones(shape=(non_violent_count,)) * non_violent_label
+    # actual_violent_labels = np.ones(shape=(violent_count,)) * violent_label
 
     # print(np.count_nonzero(np.fabs(actual_non_violent_labels - estimated_non_violent_labels)))
     # print(np.count_nonzero(np.fabs(actual_violent_labels - estimated_violent_labels)))
@@ -163,6 +171,14 @@ def refine_raw_data():
 
     estimated_labels = np.hstack((estimated_non_violent_labels, estimated_violent_labels))
     # plot_progress(estimated_violent_labels, non_violent_label, violent_label)
+
+    # np.savetxt('Non-violent-outliers-3-7-17.txt', non_violent_outlier_indices, delimiter=' ', fmt='%d')
+    # np.savetxt('Violent-outliers.txt-3-7-17', violent_outlier_indices, delimiter=' ', fmt='%d')
+
+    # np.savetxt('labls.txt-3-7-17', np.array([non_violent_label, violent_label]), delimiter=' ', fmt='%d')
+
+    # np.savetxt('Non-violent-labels.txt-3-7-17', estimated_non_violent_labels, delimiter=' ', fmt='%d')
+    # np.savetxt('Violent-labels.txt-3-7-17', estimated_violent_labels, delimiter=' ', fmt='%d')
 
     return estimated_labels, non_violent_outlier_indices, violent_outlier_indices, non_violent_label, violent_label
 

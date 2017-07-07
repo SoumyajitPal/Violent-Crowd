@@ -8,6 +8,8 @@ import constants
 
 
 def process_frame(frame):
+    if frame is None:
+        return None
     height, width, num_of_channels = np.shape(frame)
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     frame = frame[constants.Y_CROP: (height - constants.Y_CROP), constants.X_CROP: (width - constants.X_CROP)]
@@ -209,5 +211,14 @@ def process_videos(folder):
 
 
 if __name__ == '__main__':
-    folder = 'D:/Data/Violent Crowd/Violence/'
-    process_videos(folder)
+    # folder = 'D:/Data/Violent Crowd/Violence/'
+    # process_videos(folder)
+
+    array_one = [30, 70, 44, 5, 100, 9, 74, 90, 97, 39, 46, 112, 42, 36, 43, 63, 93, 24, 114, 15, 68]
+    array_two = [4, 29, 47, 69, 99, 113, 118, 119]
+    array = array_one + array_two
+    # array = [31, 120, 60, 58, 77, 48, 12, 68, 64, 97, 56, 44, 61, 70, 111, 45, 59, 55, 9]
+    for n in array:
+        features = optical_flow('D:/Data/Violent Crowd/NonViolence_normalized/video (' + str(n) + ').avi')
+        save_features(features, 'D:/Data/Violent Crowd/Special Cases/', 'video (' + str(n) + ').avi', type='nv')
+
